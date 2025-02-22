@@ -1,32 +1,89 @@
 name: Documentation
 on:
   push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
+    branches:
+      - main
+
 jobs:
   docs:
-    name: "Build Documentation"
-    runs-on: "ubuntu-latest"
-    timeout-minutes: 60
+    name: Build Documentation
+    runs-on: ubuntu-latest
     steps:
-      - uses: "actions/checkout@v4"
+      - name: Start Energy Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          task: start-measurement
+      - uses: actions/checkout@v4
       - name: Install uv
         uses: astral-sh/setup-uv@v3
       - name: Setup Python
         run: uv python install
+      - id: measurement-4
+        name: Record Measurement After Setup Python
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Setup Python
+          task: get-measurement
       - name: Install the project
-        run: |
-          uv sync --all-extras --dev
+        run: 'uv sync --all-extras --dev
+
           uv pip install -e "."
-      - name: "Activate the project"
+
+          '
+      - id: measurement-6
+        name: Record Measurement After Install the project
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Install the project
+          task: get-measurement
+      - name: Activate the project
         run: source .venv/bin/activate
-      - uses: "actions/checkout@v4"
+      - id: measurement-8
+        name: Record Measurement After Activate the project
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Activate the project
+          task: get-measurement
+      - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-pandoc@v1
-      - name: "Install documentation requirements"
-        run: |
-          ulimit -n 50000
+      - name: Install documentation requirements
+        run: 'ulimit -n 50000
+
           uv pip install -r docs/requirements.txt
-      - name: "Create documentation"
+
+          '
+      - id: measurement-12
+        name: Record Measurement After Install documentation requirements
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Install documentation requirements
+          task: get-measurement
+      - name: Create documentation
         run: sh make_docs.sh
         working-directory: ./docs
+      - id: measurement-14
+        name: Record Measurement After Create documentation
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Create documentation
+          task: get-measurement
+      - id: display-measurement
+        name: Display Energy Results
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          task: display-results
+      - name: Save Total Energy Consumption Data
+        run: echo '${ steps.final-measurement.outputs.data-total-json }' > total_energy_consumption-1740225772.json
+      - name: Upload Energy Consumption Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: total-energy-consumption
+          path: total_energy_consumption-1740225772.json
+    timeout-minutes: 60

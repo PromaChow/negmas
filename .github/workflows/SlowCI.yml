@@ -1,42 +1,122 @@
 name: SlowCI
 on:
   push:
-    branches: ["*"]
-  pull_request:
-    branches: ["*"]
+    branches:
+      - main
+
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }}"
-    runs-on: "ubuntu-latest"
-    timeout-minutes: 360
-    strategy:
-      matrix:
-        python-version: ["3.12"]
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: "actions/checkout@v4"
+      - name: Start Energy Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          task: start-measurement
+      - uses: actions/checkout@v4
       - name: Install uv
         uses: astral-sh/setup-uv@v3
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
+      - id: measurement-4
+        name: Record Measurement After Set up Python ${{ matrix.python-version }}
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Set up Python ${{ matrix.python-version }}
+          task: get-measurement
       - name: Install the project
-        run: |
-          uv sync --all-extras --dev
+        run: 'uv sync --all-extras --dev
+
           uv pip install -e "."
-      - name: "Activate the project"
+
+          '
+      - id: measurement-6
+        name: Record Measurement After Install the project
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Install the project
+          task: get-measurement
+      - name: Activate the project
         run: source .venv/bin/activate
-      - name: "Install Jupyter Kernel"
+      - id: measurement-8
+        name: Record Measurement After Activate the project
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Activate the project
+          task: get-measurement
+      - name: Install Jupyter Kernel
         run: uv run -m ipykernel install --user --name=negmas
-      - name: "Install Genius Bridge"
+      - id: measurement-10
+        name: Record Measurement After Install Jupyter Kernel
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Install Jupyter Kernel
+          task: get-measurement
+      - name: Install Genius Bridge
         run: uv run negmas genius-setup
+      - id: measurement-12
+        name: Record Measurement After Install Genius Bridge
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Install Genius Bridge
+          task: get-measurement
       - uses: actions/setup-java@v4
         with:
-          distribution: "zulu" # See 'Supported distributions' for available options
-          java-version: "15"
-      - name: "running genius bridge"
-        run: "java -jar $HOME/negmas/files/geniusbridge.jar --silent --no-logs &"
-      - name: "Setting up environment"
-        run: |
-          export NEGMAS_IGNORE_TEST_NOTEBOOKS=True
+          distribution: zulu
+          java-version: '15'
+      - name: running genius bridge
+        run: java -jar $HOME/negmas/files/geniusbridge.jar --silent --no-logs &
+      - id: measurement-15
+        name: Record Measurement After running genius bridge
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: running genius bridge
+          task: get-measurement
+      - name: Setting up environment
+        run: 'export NEGMAS_IGNORE_TEST_NOTEBOOKS=True
+
           export NEGMAS_SLOW_TEST=True
-      - name: "Run pytest for ${{ matrix.python-version }}"
-        run: "uv run pytest src/negmas tests || uv run pytest --last-failed src/negmas tests"
+
+          '
+      - id: measurement-17
+        name: Record Measurement After Setting up environment
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Setting up environment
+          task: get-measurement
+      - name: Run pytest for ${{ matrix.python-version }}
+        run: uv run pytest src/negmas tests || uv run pytest --last-failed src/negmas
+          tests
+      - id: measurement-19
+        name: Record Measurement After Run pytest for ${{ matrix.python-version }}
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          label: Run pytest for ${{ matrix.python-version }}
+          task: get-measurement
+      - id: display-measurement
+        name: Display Energy Results
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          json-output: true
+          task: display-results
+      - name: Save Total Energy Consumption Data
+        run: echo '${ steps.final-measurement.outputs.data-total-json }' > total_energy_consumption-1740225772.json
+      - name: Upload Energy Consumption Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: total-energy-consumption
+          path: total_energy_consumption-1740225772.json
+    strategy:
+      matrix:
+        python-version:
+          - '3.12'
+    timeout-minutes: 360
